@@ -1,5 +1,12 @@
 import random
 
+def mock_ai_validation(sentence, word, difficulty_level):
+    return {
+        "score": 85,
+        "level": "Intermediate",
+        "suggestion": "Good job! Just a minor correction needed.",
+        "corrected_sentence": sentence
+    }
 
 def mock_ai_validation(sentence: str, target_word: str, difficulty: str) -> dict:
     """

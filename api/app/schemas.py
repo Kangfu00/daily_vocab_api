@@ -3,6 +3,12 @@ from datetime import datetime
 from typing import List
 
 
+from pydantic import BaseModel
+
+class SentenceRequest(BaseModel):
+    word_id: int
+    sentence: str
+
 class WordResponse(BaseModel):
     id: int
     word: str

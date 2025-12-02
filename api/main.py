@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.routers import words
 from app.database import Base, engine
+from app.routers import validate_sentence
 
 Base.metadata.create_all(bind=engine)
 
@@ -39,3 +40,10 @@ app.add_middleware(
 app.include_router(words.router, prefix='/api', tags=['words'])
 from app.routers import words, practice
 app.include_router(practice.router, prefix='/api', tags=["practice"])
+
+from fastapi import FastAPI
+from app.routers import validate_sentence
+
+app = FastAPI()
+
+app.include_router(validate_sentence.router, prefix="/api")

@@ -1,7 +1,16 @@
-from sqlalchemy import Column, Integer, String, Text, DECIMAL, TIMESTAMP, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Text, DECIMAL, TIMESTAMP, Enum as SQLEnum, DateTime
 from datetime import datetime
 from app.database import Base
 
+class PracticeSubmission(Base):
+    __tablename__ = "practice_submissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, default=1)
+    word_id = Column(Integer)
+    submitted_sentence = Column(Text)
+    score = Column(Integer)
+    timestamp = Column(DateTime, default=datetime.utcnow)
 
 class Word(Base):
     __tablename__ = "words"

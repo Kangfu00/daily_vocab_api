@@ -1,9 +1,18 @@
-version: '3.8'
- 
 services:
-  api:
-    container_name:  vocab_api
- 
+  vocabapi:
+    build: ./api           # build จากโฟลเดอร์ api
+    container_name: vocab_api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: mysql+pymysql://vocabuser:vocabpass123@mysql:3306/vocabulary_db
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./api:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
   mysql:
     image: mysql:8.0
     container_name: vocab_mysql
@@ -21,20 +30,7 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 20s
       retries: 10
- 
-  vocabapi:
-    build: ./api
-    container_name: vocab_api
-    ports:
-      - "8000:8000"
-    environment:
-      DATABASE_URL: mysql+pymysql://vocabuser:vocabpass123@mysql:3306/vocabulary_db
-    depends_on:
-      mysql:
-        condition: service_healthy
-    volumes:
-      - ./api:/app
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
   n8n:
     image: n8nio/n8n
     ports:
@@ -44,6 +40,6 @@ services:
     volumes:
       - ./n8n_data:/home/node/.n8n
     restart: unless-stopped
- 
+
 volumes:
-  mysql_data: 
+  mysql_data:
