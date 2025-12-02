@@ -71,6 +71,77 @@ def get_history(limit: int = 10, db: Session = Depends(get_db)):
             score=round(float(score), 1),
             feedback=feedback,
             practiced_at=practiced_at.isoformat() # แปลง datetime เป็น string
+        ))# api/app/routers/stats.py
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from sqlalchemy import func, distinct
+from typing import List
+import math
+
+from app.database import get_db
+from app.models import Word, PracticeSession
+from app.schemas import SummaryResponse, HistoryItem
+
+router = APIRouter()
+
+@router.get("/summary", response_model=SummaryResponse)
+def get_summary(db: Session = Depends(get_db)):
+    # นับจำนวนครั้งที่ฝึก
+    total_practices = db.query(PracticeSession).count()
+    
+    # หาคะแนนเฉลี่ย
+    average_score_raw = db.query(func.avg(PracticeSession.score)).scalar()
+    average_score = round(float(average_score_raw), 1) if average_score_raw else 0.0
+    
+    # นับจำนวนคำศัพท์ที่ไม่ซ้ำกัน
+    total_words_practiced = db.query(func.count(distinct(PracticeSession.word_id))).scalar()
+    
+    # นับจำนวนตามระดับความยาก (Join ตาราง Word)
+    level_counts = db.query(
+        Word.difficulty_level,
+        func.count(PracticeSession.id)
+    ).join(PracticeSession, PracticeSession.word_id == Word.id)\
+     .group_by(Word.difficulty_level).all()
+    
+    # เตรียมข้อมูลส่งกลับ (Default เป็น 0)
+    level_distribution = {'Beginner': 0, 'Intermediate': 0, 'Advanced': 0}
+    for level, count in level_counts:
+        if level in level_distribution:
+            level_distribution[level] = count
+    
+    return SummaryResponse(
+        total_practices=total_practices,
+        average_score=average_score,
+        total_words_practiced=total_words_practiced,
+        level_distribution=level_distribution
+    )
+
+@router.get("/history", response_model=List[HistoryItem])
+def get_history(limit: int = 10, db: Session = Depends(get_db)):
+    # ดึงข้อมูลประวัติล่าสุด
+    history_records = db.query(
+        PracticeSession.id,
+        Word.word,
+        PracticeSession.user_sentence,
+        PracticeSession.score,
+        PracticeSession.feedback,
+        PracticeSession.practiced_at
+    ).join(Word, PracticeSession.word_id == Word.id)\
+     .order_by(PracticeSession.practiced_at.desc())\
+     .limit(limit).all()
+    
+    # แปลงข้อมูลให้ตรงกับ Schema
+    results = []
+    for record in history_records:
+        results.append(HistoryItem(
+            id=record.id,
+            word=record.word,
+            user_sentence=record.user_sentence,
+            score=float(record.score) if record.score else 0.0,
+            feedback=record.feedback,
+            practiced_at=record.practiced_at
         ))
+        
+    return results
         
     return history_items

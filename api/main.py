@@ -1,23 +1,47 @@
 from fastapi import FastAPI
-from app.routers import words
+from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
-from app.routers import validate_sentence
+# นำเข้า router ทั้งหมดที่ต้องใช้
+from app.routers import words, practice, stats
 
-Base.metadata.create_all(bind=engine)
+# สร้างตารางฐานข้อมูลเมื่อเริ่มแอป (ย้ายมาใส่ใน event ตามที่เคยคุยกัน)
+# เพื่อป้องกันปัญหา MySQL connection error ตอนเริ่ม
+def create_tables():
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Database tables created successfully.")
+    except Exception as e:
+        print(f"Error creating tables: {e}")
 
-# Initialize FastAPI app
 app = FastAPI(
     title="Vocabulary Practice API",
     version="1.0.0",
     description="API for vocabulary practice and learning"
 )
 
-app.include_router(words.router, prefix='/api', tags='words')
+# เรียกใช้ฟังก์ชันสร้างตารางตอน Startup
+@app.on_event("startup")
+async def startup_event():
+    create_tables()
+
+# ตั้งค่า CORS (เพื่อให้ Frontend เชื่อมต่อได้)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # หรือระบุ ["http://localhost:3000"] เพื่อความปลอดภัย
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# --- รวม Router ทั้งหมดที่นี่ ---
+app.include_router(words.router, prefix='/api', tags=['Words'])
+app.include_router(practice.router, prefix='/api', tags=['Practice'])
+app.include_router(stats.router, prefix='/api', tags=['Stats']) # เพิ่มบรรทัดนี้ Dashboard ถึงจะทำงาน!
 
 @app.get("/")
 def read_root():
     return {
-        "message": "Vocabulary Practice API",
+        "message": "Vocabulary Practice API is running!",
         "version": "1.0.0",
         "endpoints": {
             "random_word": "/api/word",
@@ -26,24 +50,3 @@ def read_root():
             "history": "/api/history"
         }
     }
-    
-from fastapi.middleware.cors import CORSMiddleware
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.include_router(words.router, prefix='/api', tags=['words'])
-from app.routers import words, practice
-app.include_router(practice.router, prefix='/api', tags=["practice"])
-
-from fastapi import FastAPI
-from app.routers import validate_sentence
-
-app = FastAPI()
-
-app.include_router(validate_sentence.router, prefix="/api")
